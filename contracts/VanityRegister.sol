@@ -10,6 +10,11 @@ contract VanityRegisterService is Ownable {
         address owner;
     }
 
+    struct LockedBalance {
+		uint256 expires;
+		uint256 lockedBalance;
+	}
+
     uint256 public lockNamePrice = 0.01 ether;
     uint256 public lockTime = 90 days;
     uint256 public bytePrice = 0.0001 ether;
@@ -20,13 +25,7 @@ contract VanityRegisterService is Ownable {
 
     mapping(bytes32 => VanityName) public vanityNames;
     mapping(bytes32 => uint256) public preRegisters;
-
-    modifier isNameLengthAllowed(bytes memory _name) {
-		// @dev - check if the provided name is with allowed length
-		require(_name.length >= NAME_MIN_LENGTH, "Name is too short.");
-		require(_name.length <= NAME_MAX_LENGTH, "Name is too long.");
-		_;
-	}
+    mapping(bytes32 => LockedBalance) public lockedBalances;
 
     modifier hasRequiredBalance(bytes memory _name) {
         uint256 namePrice = getNamePrice(_name);
@@ -35,8 +34,14 @@ contract VanityRegisterService is Ownable {
         _;
     }
 
+    modifier isNameLengthAllowed(bytes memory _name) {
+		require(_name.length >= NAME_MIN_LENGTH, "Name is too short.");
+		require(_name.length <= NAME_MAX_LENGTH, "Name is too long.");
+		_;
+	}
+
     modifier hasPossiblePreRegister(bytes memory _name) {
-        bytes32 hash = keccak256(abi.encodePacked(_name, msg.sender));
+        bytes32 hash = keccak256(abi.encodePacked(msg.sender, _name));
         require(preRegisters[hash] > 0, "Has no available preRegister");
         require(block.timestamp > preRegisters[hash] + FRONTRUN_TIME, "Should wait for a while...");
         _;
@@ -71,6 +76,11 @@ contract VanityRegisterService is Ownable {
         vanityNames[nameHash] = newName;
         cumulFees += getNamePrice(_name);
 
+        bytes32 lbKey = keccak256(abi.encodePacked(msg.sender, _name));
+        lockedBalances[lbKey] = LockedBalance({
+            expires: block.timestamp + lockTime,
+            lockedBalance: lockNamePrice
+        });
 
         emit VanityNameRegistered(_name, msg.sender, block.timestamp);
     }
@@ -82,12 +92,25 @@ contract VanityRegisterService is Ownable {
 
 		cumulFees += namePrice;
 		vanityNames[nameHash].expires += lockTime;
+
+        bytes32 lbKey = keccak256(abi.encodePacked(msg.sender, _name));
+        lockedBalances[lbKey].expires += lockTime;
 		
 		emit VanityNameRenewed(_name, msg.sender, block.timestamp);
 	}
 
     function withdrawLockedBalance(bytes memory _name) external isNameOwner(_name) {
+        bytes32 lbKey = keccak256(abi.encodePacked(msg.sender, _name));
 
+		require(lockedBalances[lbKey].lockedBalance > 0, "No locked balance");
+		require(
+			lockedBalances[lbKey].expires < block.timestamp,
+			"Unable to unlock"
+		);
+
+		uint256 aux = lockedBalances[lbKey].lockedBalance;
+		lockedBalances[lbKey].lockedBalance = 0;
+		payable(msg.sender).transfer(aux);
     }
 
     function withdrawFees() external onlyOwner {
