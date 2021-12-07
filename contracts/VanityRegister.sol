@@ -35,8 +35,8 @@ contract VanityRegisterService is Ownable {
     }
 
     modifier isNameLengthAllowed(bytes memory _name) {
-		require(_name.length >= NAME_MIN_LENGTH, "Name is too short.");
-		require(_name.length <= NAME_MAX_LENGTH, "Name is too long.");
+        require(_name.length >= NAME_MIN_LENGTH, "Name is too short.");
+        require(_name.length <= NAME_MAX_LENGTH, "Name is too long.");
 		_;
 	}
 
@@ -121,11 +121,33 @@ contract VanityRegisterService is Ownable {
 		payable(_owner).transfer(aux);
 	}
     
+    function getRegisterPrice(bytes memory _name) external view isNameLengthAllowed(_name) returns (uint256) {
+		uint256 namePrice = getNamePrice(_name);
+		return namePrice + lockNamePrice;
+	}
+
     function getNamePrice(bytes memory _name) public view isNameLengthAllowed(_name) returns (uint256) {
         return bytePrice * _name.length;
     }
 
     function getNameHash(bytes memory _name) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_name));
+    }
+
+    function setLockNamePrice(uint256 _price) external onlyOwner {
+        lockNamePrice = _price;
+    }
+
+    function setLockTime(uint256 _lockTime) external onlyOwner {
+        lockTime = _lockTime;
+    }
+
+    function setBytePrice(uint256 _bytePrice) external onlyOwner {
+        bytePrice = _bytePrice;
+    }
+
+    function getNameOwner(bytes memory _name) public view returns (address) {
+        bytes32 nameHash = getNameHash(_name);
+        return vanityNames[nameHash].owner;
     }
 }
