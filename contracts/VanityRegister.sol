@@ -15,8 +15,10 @@ contract VanityRegisterService is Ownable {
     uint256 public bytePrice = 0.0001 ether;
     uint8 public constant NAME_MIN_LENGTH = 3;
 	uint8 public constant NAME_MAX_LENGTH = 50;
+    uint16 public constant FRONTRUN_TIME = 3 minutes;
 
     mapping(bytes32 => VanityName) public vanityNames;
+    mapping(bytes32 => uint256) public preRegisters;
 
     modifier isNameLengthAllowed(bytes memory _name) {
 		// @dev - check if the provided name is with allowed length
@@ -32,7 +34,20 @@ contract VanityRegisterService is Ownable {
         _;
     }
 
-    function register(bytes memory _name) payable isNameLengthAllowed(_name) hasRequiredBalance(_name) public {
+    modifier hasPossiblePreRegister(bytes memory _name) {
+        bytes32 hash = keccak256(abi.encodePacked(_name, msg.sender));
+        require(preRegisters[hash] > 0, "Has no available preRegister");
+        require(block.timestamp > preRegisters[hash] + FRONTRUN_TIME, "Should wait for a while...");
+        _;
+    }
+
+    event VanityNameRegistered(bytes name, address owner, uint indexed timestamp);
+
+    function preRegister(bytes32 _hash) external {
+        preRegisters[_hash] = block.timestamp;
+    }
+
+    function register(bytes memory _name) payable isNameLengthAllowed(_name) hasRequiredBalance(_name) hasPossiblePreRegister(_name) public {
         bytes32 nameHash = getNameHash(_name);
         VanityName memory newName = VanityName({
             name: _name,
@@ -41,6 +56,7 @@ contract VanityRegisterService is Ownable {
         });
     
         vanityNames[nameHash] = newName;
+        emit VanityNameRegistered(_name, msg.sender, block.timestamp);
     }
 
     function getNamePrice(bytes memory _name) public view isNameLengthAllowed(_name) returns (uint256) {
