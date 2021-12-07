@@ -13,6 +13,7 @@ contract VanityRegisterService is Ownable {
     uint256 public lockNamePrice = 0.01 ether;
     uint256 public lockTime = 90 days;
     uint256 public bytePrice = 0.0001 ether;
+    uint256 public cumulFees = 0;
     uint8 public constant NAME_MIN_LENGTH = 3;
 	uint8 public constant NAME_MAX_LENGTH = 50;
     uint16 public constant FRONTRUN_TIME = 3 minutes;
@@ -41,7 +42,19 @@ contract VanityRegisterService is Ownable {
         _;
     }
 
+    modifier isNameOwner(bytes memory name) {
+		bytes32 nameHash = getNameHash(name);
+		require(
+			vanityNames[nameHash].owner == msg.sender &&
+				vanityNames[nameHash].expires > block.timestamp,
+			"No permission to name."
+		);
+		_;
+	}
+
+
     event VanityNameRegistered(bytes name, address owner, uint indexed timestamp);
+    event VanityNameRenewed(bytes name, address owner, uint indexed timestamp);
 
     function preRegister(bytes32 _hash) external {
         preRegisters[_hash] = block.timestamp;
@@ -56,9 +69,35 @@ contract VanityRegisterService is Ownable {
         });
     
         vanityNames[nameHash] = newName;
+        cumulFees += getNamePrice(_name);
+
+
         emit VanityNameRegistered(_name, msg.sender, block.timestamp);
     }
 
+    function renew(bytes memory _name) public payable isNameOwner(_name) {
+		bytes32 nameHash = getNameHash(_name);
+		uint256 namePrice = getNamePrice(_name);
+		require(msg.value == namePrice, "Invalid amount.");
+
+		cumulFees += namePrice;
+		vanityNames[nameHash].expires += lockTime;
+		
+		emit VanityNameRenewed(_name, msg.sender, block.timestamp);
+	}
+
+    function withdrawLockedBalance(bytes memory _name) external isNameOwner(_name) {
+
+    }
+
+    function withdrawFees() external onlyOwner {
+		require(cumulFees > 0, "No fees to withdraw");
+		uint256 aux = cumulFees;
+		cumulFees = 0;
+		address _owner = owner();
+		payable(_owner).transfer(aux);
+	}
+    
     function getNamePrice(bytes memory _name) public view isNameLengthAllowed(_name) returns (uint256) {
         return bytePrice * _name.length;
     }
