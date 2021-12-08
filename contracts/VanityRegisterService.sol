@@ -50,10 +50,6 @@ contract VanityRegisterService is Ownable {
 
     modifier isNameOwner(bytes memory name) {
 		bytes32 nameHash = getNameHash(name);
-        console.log("vanityNames[nameHash].owner =>", vanityNames[nameHash].owner);
-        console.log("msg.sender =>", msg.sender);
-        console.log("vanityNames[nameHash].expires =>", vanityNames[nameHash].expires);
-        console.log("block.timestamp =>", block.timestamp);
 
 		require(
 			vanityNames[nameHash].owner == msg.sender &&
