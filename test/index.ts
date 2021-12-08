@@ -11,7 +11,7 @@ describe("Vanity Name Service", function () {
   this.timeout(100000);
   const sampleName = "sample_name";
 
-  beforeEach(async function () {
+  it("Should work: contract deployment", async function () {
     const VanityRegisterServiceContract = await ethers.getContractFactory(
       "VanityRegisterService"
     );
@@ -78,8 +78,6 @@ describe("Vanity Name Service", function () {
   });
 
   it("Should fail: registering a name for insufficient amount", async function () {
-    await addEvmTime(400);
-    await mineBlocks(1);
     await expect(
       vanityService
         .connect(userA)
@@ -116,11 +114,6 @@ describe("Vanity Name Service", function () {
   });
 
   it("Should work: A get price and register a name", async function () {
-    const hashedName = await vanityService
-      .connect(userA)
-      .getPreRegisterHash(ethers.utils.toUtf8Bytes(sampleName));
-    await vanityService.connect(userA).preRegister(hashedName);
-
     await addEvmTime(400);
     await mineBlocks(1);
 
