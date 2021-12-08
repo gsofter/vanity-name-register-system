@@ -30,7 +30,7 @@ contract VanityRegisterService is Ownable {
     modifier hasRequiredBalance(bytes memory _name) {
         uint256 namePrice = getNamePrice(_name);
         uint256 totalPrice = namePrice + lockNamePrice;
-        require(msg.value > totalPrice, "Insufficient amount!");
+        require(msg.value >= totalPrice, "Insufficient amount!");
         _;
     }
 
@@ -42,8 +42,8 @@ contract VanityRegisterService is Ownable {
 
     modifier hasPossiblePreRegister(bytes memory _name) {
         bytes32 hash = keccak256(abi.encodePacked(msg.sender, _name));
-        require(preRegisters[hash] > 0, "Has no available preRegister");
-        require(block.timestamp > preRegisters[hash] + FRONTRUN_TIME, "Should wait for a while...");
+        require(preRegisters[hash] > 0, "No available preRegister.");
+        require(block.timestamp > preRegisters[hash] + FRONTRUN_TIME, "No available preRegister.");
         _;
     }
 
@@ -57,6 +57,16 @@ contract VanityRegisterService is Ownable {
 		_;
 	}
 
+    modifier isAvailableName(bytes memory _name) {
+        bytes32 nameHash = getNameHash(_name);
+        require(
+			vanityNames[nameHash].expires == 0 ||
+				vanityNames[nameHash].expires < block.timestamp,
+			"Name already registered."
+		);
+		_;
+    }
+
 
     event VanityNameRegistered(bytes name, address owner, uint indexed timestamp);
     event VanityNameRenewed(bytes name, address owner, uint indexed timestamp);
@@ -65,7 +75,13 @@ contract VanityRegisterService is Ownable {
         preRegisters[_hash] = block.timestamp;
     }
 
-    function register(bytes memory _name) payable isNameLengthAllowed(_name) hasRequiredBalance(_name) hasPossiblePreRegister(_name) public {
+    function register(bytes memory _name) 
+        payable 
+        isNameLengthAllowed(_name) 
+        hasRequiredBalance(_name) 
+        hasPossiblePreRegister(_name) 
+        isAvailableName(_name)
+        public {
         bytes32 nameHash = getNameHash(_name);
         VanityName memory newName = VanityName({
             name: _name,
@@ -134,6 +150,10 @@ contract VanityRegisterService is Ownable {
         return keccak256(abi.encodePacked(_name));
     }
 
+    function getPreRegisterHash(bytes memory _name) public view returns (bytes32) {
+		return keccak256(abi.encodePacked(msg.sender, _name));
+	}
+
     function setLockNamePrice(uint256 _price) external onlyOwner {
         lockNamePrice = _price;
     }
@@ -150,4 +170,14 @@ contract VanityRegisterService is Ownable {
         bytes32 nameHash = getNameHash(_name);
         return vanityNames[nameHash].owner;
     }
+
+    function isNameAvailable(bytes memory _name)
+		external
+		view
+		isAvailableName(_name)
+		isNameLengthAllowed(_name)
+		returns (bool)
+	{
+		return true;
+	}
 }
