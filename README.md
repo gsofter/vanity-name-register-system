@@ -1,10 +1,29 @@
-# Advanced Sample Hardhat Project
+# Vanity Name Register System
 
-This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
+### Main functions
 
-The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
+- preRegister: Save item to mapping with structure of hash(address, name) => timestamp
+
+- register: Register & lock balance for available pre registerd lists
+
+- renew: Increase expiration time by adding lockTime
+
+- withdrawLockedBalance: width available locked balance
 
 Try running some of the following tasks:
+
+### How to prevent frontrun
+
+```
+To register name, user name to preRegister it's hash([userAddress, name]).
+
+At the registeration step, if hash(userAddress, name) is pre registered, user can register the name, other wise the transaction would fail.
+
+To prevent malcious user to frontrun preRegister and register together before the user's register transaction, I've added cooldown time which indicates the minimum duration between user's preRegister request and register request.
+
+In conclusion, to register name, user must run 2 transactions: preRegister and register.
+And register must be called at least cool down time has passed.
+```
 
 ```shell
 npx hardhat accounts
