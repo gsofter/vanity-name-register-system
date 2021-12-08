@@ -14,7 +14,6 @@ Try running some of the following tasks:
 
 ### How to prevent frontrun
 
-```
 To register name, user name to preRegister it's hash([userAddress, name]).
 
 At the registeration step, if hash(userAddress, name) is pre registered, user can register the name, other wise the transaction would fail.
@@ -23,7 +22,6 @@ To prevent malcious user to frontrun preRegister and register together before th
 
 In conclusion, to register name, user must run 2 transactions: preRegister and register.
 And register must be called at least cool down time has passed.
-```
 
 ```shell
 npx hardhat accounts
