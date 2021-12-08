@@ -127,14 +127,68 @@ describe("Vanity Name Service", function () {
         value: price.toString(),
       });
   });
+
+  it("Should work: return userA is owner", async function () {
+    expect(
+      await vanityService
+        .connect(userA)
+        .getNameOwner(ethers.utils.toUtf8Bytes(sampleName))
+    ).to.be.equal(userA.address);
+  });
+
+  it("Should work: userA can renew/extend expiry date", async function () {
+    const price = await vanityService
+      .connect(userA)
+      .getNamePrice(ethers.utils.toUtf8Bytes(sampleName));
+
+    await vanityService
+      .connect(userA)
+      .renew(ethers.utils.toUtf8Bytes(sampleName), { value: price.toString() });
+  });
+
+  it("Sould work: userA should be able to unlock balance", async function () {
+    await addEvmTime(31656926 * 2);
+    await mineBlocks(1);
+    const balanceBefore = await getAccountBalance(userA.address);
+    await vanityService
+      .connect(userA)
+      .withdrawLockedBalance(ethers.utils.toUtf8Bytes(sampleName));
+    const balanceAfter = await getAccountBalance(userA.address);
+    expect(balanceAfter > balanceBefore).to.equal(true);
+  });
+
+  it("Should fail: userA unlock balance again", async function () {
+    await expect(
+      vanityService
+        .connect(userA)
+        .withdrawLockedBalance(ethers.utils.toUtf8Bytes(sampleName))
+    ).to.be.revertedWith("No locked balance");
+  });
+
+  it("Should work: register name again", async function () {
+    expect(
+      await vanityService
+        .connect(userA)
+        .isNameAvailable(ethers.utils.toUtf8Bytes(sampleName))
+    ).to.equal(true);
+  });
+
+  it("Should work: owner withdraw fees", async function () {
+    const balanceBefore = await getAccountBalance(owner.address);
+    await vanityService.withdrawFees();
+    const balanceAfter = await getAccountBalance(owner.address);
+    expect(Number(balanceAfter) - Number(balanceBefore) > 0).to.equal(true);
+  });
 });
 
 async function getAccountBalance(address: string) {
   return await ethers.provider.getBalance(address);
 }
+
 async function addEvmTime(time: number) {
   await ethers.provider.send("evm_increaseTime", [time]);
 }
+
 async function mineBlocks(blockNumber: number) {
   while (blockNumber > 0) {
     blockNumber--;

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 contract VanityRegisterService is Ownable {
 	struct VanityName {
@@ -49,6 +50,11 @@ contract VanityRegisterService is Ownable {
 
     modifier isNameOwner(bytes memory name) {
 		bytes32 nameHash = getNameHash(name);
+        console.log("vanityNames[nameHash].owner =>", vanityNames[nameHash].owner);
+        console.log("msg.sender =>", msg.sender);
+        console.log("vanityNames[nameHash].expires =>", vanityNames[nameHash].expires);
+        console.log("block.timestamp =>", block.timestamp);
+
 		require(
 			vanityNames[nameHash].owner == msg.sender &&
 				vanityNames[nameHash].expires > block.timestamp,
@@ -115,7 +121,7 @@ contract VanityRegisterService is Ownable {
 		emit VanityNameRenewed(_name, msg.sender, block.timestamp);
 	}
 
-    function withdrawLockedBalance(bytes memory _name) external isNameOwner(_name) {
+    function withdrawLockedBalance(bytes memory _name) external {
         bytes32 lbKey = keccak256(abi.encodePacked(msg.sender, _name));
 
 		require(lockedBalances[lbKey].lockedBalance > 0, "No locked balance");
