@@ -10,7 +10,6 @@
 
 - withdrawLockedBalance: width available locked balance
 
-Try running some of the following tasks:
 
 ### How to prevent frontrun
 
@@ -22,6 +21,10 @@ To prevent malcious user to frontrun preRegister and register together before th
 
 In conclusion, to register name, user must run 2 transactions: preRegister and register.
 And register must be called at least cool down time has passed.
+
+
+### Available scripts
+Try running some of the following tasks:
 
 ```shell
 npx hardhat accounts
